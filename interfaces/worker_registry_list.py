@@ -55,12 +55,12 @@ class WorkerRegistryList(ABC):
         application_type_id  Application type ID to lookup in the registry
 
         Returns:
-        Tuple containing totalCount, lookupTag, and ids on success:
+        Tuple containing totalCount, lookUpTag, and ids on success:
         totalCount Total number of entries matching a specified lookup
                    criteria. If this number is larger than the size of the
-                   ids array, the caller should use the lookupTag to call
+                   ids array, the caller should use the lookUpTag to call
                    registry_lookup_next to retrieve the rest of the IDs
-        lookupTag  Optional parameter. If it is returned, it means that
+        lookUpTag  Optional parameter. If it is returned, it means that
                    there are more matching registry IDs that can be
                    retrieved by calling the function registry_lookup_next
                    with this tag as an input parameter.

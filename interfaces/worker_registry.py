@@ -54,7 +54,7 @@ class WorkerRegistry(ABC):
         If the list is too large to fit into a single response (the maximum
         number of entries in a single response is implementation specific),
         the smart contract should return the first batch of the results
-        and provide a lookupTag that can be used by the caller to
+        and provide a lookUpTag that can be used by the caller to
         retrieve the next batch by calling worker_lookup_next.
 
         Parameters:
@@ -73,7 +73,7 @@ class WorkerRegistry(ABC):
         total_count Total number of entries matching a specified
                     lookup criteria. If this number is larger than the
                     size of the IDs array, the caller should use
-                    lookupTag to call worker_lookup_next to retrieve
+                    lookUpTag to call worker_lookup_next to retrieve
                     the rest of the IDs
         lookup_tag  Optional parameter. If it is returned, it means
                     that there are more matching worker IDs, which can then
@@ -107,7 +107,7 @@ class WorkerRegistry(ABC):
         total_count    Total number of entries matching this lookup
                        criteria.  If this number is larger than the number
                        of IDs returned so far, the caller should use
-                       lookupTag to call worker_lookup_next to retrieve
+                       lookUpTag to call worker_lookup_next to retrieve
                        the rest of the IDs
         new_lookup_tag Optional parameter. If it is returned, it
                        means that there are more matching worker IDs that
