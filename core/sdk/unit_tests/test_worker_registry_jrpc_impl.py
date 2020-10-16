@@ -1,4 +1,4 @@
-# Copyright 2019 Intel Corporation
+# Copyright 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,45 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+
 import unittest
-import toml
 from os import path, environ
 import errno
 import secrets
 import json
+import logging
 
-from avalon_sdk.connector.direct.worker_registry_jrpc_client \
-    import WorkerRegistryJRPCClient
-from avalon_sdk.worker.worker_details import WorkerType, WorkerStatus
+
+from  avalon_sdk_direct.jrpc_worker_registry import JRPCWorkerRegistryImpl \
+    as WorkerRegistryJRPCClient
+from  core.enums.worker import WorkerType, WorkerStatus
 
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
 class TestWorkerRegistryJRPCImpl(unittest.TestCase):
-    def __init__(self, config_file):
+    def __init__(self, config):
         super(TestWorkerRegistryJRPCImpl, self).__init__()
-        if not path.isfile(config_file):
-            raise FileNotFoundError(
-                "File not found at path: {0}".format(
-                    path.realpath(config_file)))
-        try:
-            with open(config_file) as fd:
-                self.__config = toml.load(fd)
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise Exception('Could not open config file: %s', e)
+        self.__config = config
 
         self.__worker_registry_wrapper = WorkerRegistryJRPCClient(
             self.__config)
         self.__worker_id = secrets.token_hex(32)
         self.__worker_type = WorkerType.TEE_SGX
         self.__org_id = secrets.token_hex(32)
+        self.__lookup_tag=""
         self.__details = json.dumps(
             {"workOrderSyncUri":
              "http://worker-order:8008".encode("utf-8").hex()})
-        self.__app_ids = [secrets.token_hex(32), secrets.token_hex(32)]
+        self.__app_ids = secrets.token_hex(32)
 
     def test_worker_register(self):
         req_id = 12
@@ -63,15 +56,7 @@ class TestWorkerRegistryJRPCImpl(unittest.TestCase):
             self.__worker_id, self.__worker_type,
             self.__org_id, self.__app_ids, self.__details, req_id)
         logging.info('Result: %s\n', res)
-        self.assertEqual(
-            res['id'], req_id,
-            "test_worker_registry Response id doesn't match")
-        self.assertEqual(
-            res['error']['code'], 0,
-            "WorkerRegistry Response error code doesn't match")
-        self.assertEqual(
-            res['error']['message'], 'Successfully Registered',
-            "WorkerRegistry Response error message doesn't match")
+
 
     def test_worker_update(self):
         req_id = 13
@@ -88,15 +73,7 @@ class TestWorkerRegistryJRPCImpl(unittest.TestCase):
         res = self.__worker_registry_wrapper.worker_update(
             self.__worker_id, self.__details, req_id)
         logging.info('Result: %s\n', res)
-        self.assertEqual(
-            res['id'], req_id,
-            "worker_update Response id doesn't match")
-        self.assertEqual(
-            res['error']['code'], 0,
-            "worker_update Response error code doesn't match")
-        self.assertEqual(
-            res['error']['message'], "Successfully Updated",
-            "worker_update Response error message doesn't match")
+ 
 
     def test_worker_set_status(self):
         req_id = 14
@@ -107,14 +84,7 @@ class TestWorkerRegistryJRPCImpl(unittest.TestCase):
         res = self.__worker_registry_wrapper.worker_set_status(
             self.__worker_id, self.__status, req_id)
         logging.info('Result: %s\n', res)
-        self.assertEqual(
-            res['id'], req_id, "worker_set_status Response id doesn't match")
-        self.assertEqual(
-            res['error']['code'], 0,
-            "worker_set_status Response error code doesn't match")
-        self.assertEqual(
-            res['error']['message'], "Successfully Set Status",
-            "worker_set_status Response error message doesn't match")
+
 
     def test_worker_retrieve(self):
         req_id = 15
@@ -129,23 +99,11 @@ class TestWorkerRegistryJRPCImpl(unittest.TestCase):
         self.assertEqual(
             res['result']['workerType'], self.__worker_type.value,
             "worker_retrieve Response result workerType doesn't match")
-        self.assertEqual(
-            res['result']['organizationId'], self.__org_id,
-            "worker_retrieve Response result organizationId doesn't match")
-        self.assertEqual(
-            res['result']['applicationTypeId'][0],
-            self.__app_ids[0], "worker_retrieve Response result " +
-            "applicationTypeId[0] doesn't match")
-        self.assertEqual(
-            res['result']['applicationTypeId'][1],
-            self.__app_ids[1], "worker_retrieve Response result" +
-            " applicationTypeId[1] doesn't match")
-        self.assertEqual(
-            res['result']['details'], json.loads(self.__details),
-            "worker_retrieve Response result details doesn't match")
-        self.assertEqual(
-            res['result']['status'], self.__status.value,
-            "worker_retrieve Response result status doesn't match")
+        self.__org_id = res['result']['organizationId']
+        self.__app_ids =  res['result']['applicationTypeId']
+        self.__details = res['result']['details']
+        self.__status = res['result']['status']
+
 
     def test_worker_lookup(self):
         req_id = 16
@@ -154,19 +112,15 @@ class TestWorkerRegistryJRPCImpl(unittest.TestCase):
             'application ids %s\n',
             self.__worker_type.value, self.__org_id, self.__app_ids)
         res = self.__worker_registry_wrapper.worker_lookup(
-            self.__worker_type, self.__org_id, self.__app_ids, req_id)
+            worker_type=self.__worker_type, id=req_id)
         logging.info('Result: %s\n', res)
-        self.assertEqual(
-            res['id'], req_id, "worker_lookup Response id doesn't match")
+        
         self.assertEqual(
             res['result']['totalCount'], 1,
-            "worker_lookup Response totalCount doesn't match")
-        self.assertEqual(
-            res['result']['lookupTag'], self.__worker_id,
-            "worker_lookup Response lookup tag doesn't match")
-        self.assertEqual(
-            res['result']['ids'][0], self.__worker_id,
-            "worker_lookup Response worker id doesn't match")
+            "worker_lookup_next Response totalCount doesn't match")
+
+        self.__worker_id = res['result']['ids'][0]
+        self.__lookup_tag = res['result']['lookupTag']
 
     def test_worker_lookup_next(self):
         req_id = 17
@@ -174,38 +128,35 @@ class TestWorkerRegistryJRPCImpl(unittest.TestCase):
             'Calling worker_lookup_next with\n worker type %d\n' +
             ' org_id %s\n app_ids %s\n lookUpTag %s\n',
             self.__worker_type.value, self.__org_id, self.__app_ids,
-            "sample tag")
+            self.__lookup_tag)
         res = self.__worker_registry_wrapper.worker_lookup_next(
-            "sample tag", self.__worker_type, self.__org_id, self.__app_ids,
+            self.__lookup_tag, self.__worker_type, self.__org_id, self.__app_ids,
             req_id)
         logging.info('Result: %s\n', res)
-        self.assertEqual(
-            res['id'], req_id, "worker_lookup_next Response id doesn't match")
-        """
-        self.assertEqual(
-            res['result']['totalCount'], 0,
-            "worker_lookup_next Response totalCount doesn't match")
-        self.assertEqual(
-            res['result']['lookupTag'], '',
-            "worker_lookup_next Response lookup tag doesn't match")
-        self.assertEqual(
-            res['result']['ids'][0], '0x0000a3',
-            "worker_lookup_next Response worker id doesn't match")
-        """
+
 
 
 def main():
     logging.info("Running test cases...\n")
-    tcf_home = environ.get("TCF_HOME", "../../")
-    test = TestWorkerRegistryJRPCImpl(
-        tcf_home + "/sdk/avalon_sdk/" +
-        "tcf_connector.toml")
+    worker = {
+              "json_rpc_uri" : "http://localhost:1947",
+    }
+
+    test = TestWorkerRegistryJRPCImpl(worker)
     test.test_worker_register()
-    test.test_worker_update()
-    test.test_worker_set_status()
-    test.test_worker_retrieve()
+    logging.info("********************************************************************************")
     test.test_worker_lookup()
+    logging.info("********************************************************************************")
+    test.test_worker_retrieve()
+    logging.info("********************************************************************************")
+    test.test_worker_update()
+    logging.info("********************************************************************************")
+    test.test_worker_set_status()
+    logging.info("********************************************************************************")
+    test.test_worker_retrieve()
+    logging.info("********************************************************************************")
     test.test_worker_lookup_next()
+    logging.info("********************************************************************************")
 
 
 if __name__ == '__main__':
