@@ -60,7 +60,7 @@ class WorkerRegistryList(ABC):
                    criteria. If this number is larger than the size of the
                    ids array, the caller should use the lookUpTag to call
                    registry_lookup_next to retrieve the rest of the IDs
-        lookUpTag  Optional parameter. If it is returned, it means that
+        lookupTag  Optional parameter. If it is returned, it means that
                    there are more matching registry IDs that can be
                    retrieved by calling the function registry_lookup_next
                    with this tag as an input parameter.
