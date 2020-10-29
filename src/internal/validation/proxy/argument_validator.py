@@ -12,6 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Argument Validation Extension
+""" 
 
-__all__ = [ ]
+from validation.argument_validator import ArgumentValidator
+from exceptions.proxy.contract_error import ContractFailed
+
+class ProxyArgumentValidator(ArgumentValidator):
+
+    def __init__(self):
+        super().__init__()
+
+    def not_valid_contract(self, **kwargs): 
+        for key, value in kwargs.items():
+            if value is None:
+                message = key.replace("_", " ") + " is not avaliable !!"
+                raise ContractFailed(message)
+        return True
 
