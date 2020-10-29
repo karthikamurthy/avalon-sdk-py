@@ -12,6 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enums.error_code import JRPCErrorCodes
 
-__all__ = [ ]
+class UnknownException(Exception):
+    """Any unknown error and status is returned in 
+    the following generic JSON RPC error format"""
 
+    def __init__(self, message, data):
+
+        self.error = {
+            "jsonrpc": "2.0",       # as per JSON RPC spec
+            "id": 0,               # the same as in input
+            "error": {              # as per JSON RPC spec
+                "code": JRPCErrorCodes.UNKNOWN_ERROR,
+                "message": message,
+                "data": data
+            }   
+        }
